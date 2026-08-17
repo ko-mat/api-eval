@@ -3,9 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.db import get_db
 from app.models.department import Department
+from app.models.user import User
 from app.schemas import DepartmentCreate, DepartmentResponse
+from app.routes.deps import get_current_user
 
-router = APIRouter(prefix="/departments", tags=["departments"])
+router = APIRouter(
+    prefix="/departments",
+    tags=["departments"],
+    dependencies=[Depends(get_current_user)]
+)
 
 @router.post(
     "",

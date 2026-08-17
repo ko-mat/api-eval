@@ -8,14 +8,19 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload, selectinload
 from app.db import get_db
 from app.storage.base import StorageService
-from app.routes.deps import get_storage
+from app.routes.deps import get_storage, get_current_user
 from app.models.employee import Employee
 from app.models.department import Department
 from app.models.history import EmployeeHistory
+from app.models.user import User
 from app.schemas import EmployeeResponse, EmployeeDetailResponse
 from app.utils.crypto import encrypt, decrypt, encrypt_bytes, decrypt_bytes, hash_search_key
 
-router = APIRouter(prefix="/employees", tags=["employees"])
+router = APIRouter(
+    prefix="/employees",
+    tags=["employees"],
+    dependencies=[Depends(get_current_user)]
+)
 BASE_URL = os.getenv("BASE_URL", "http://localhost").rstrip("/")
 
 @router.post(
@@ -139,7 +144,7 @@ async def create_employee(
     db_employee.address = decrypt(db_employee.address)
     db_employee.birth_date = decrypt(db_employee.birth_date)
     if db_employee.photo_url:
-        db_employee.photo_url = f"{BASE_URL}/api/v1/employees/{db_employee.id}/photo"
+        db_employee.photo_url = f"/api/v1/employees/{db_employee.id}/photo"
         
     return db_employee
 
@@ -180,7 +185,7 @@ async def list_employees(
         emp.address = decrypt(emp.address)
         emp.birth_date = decrypt(emp.birth_date)
         if emp.photo_url:
-            emp.photo_url = f"{BASE_URL}/api/v1/employees/{emp.id}/photo"
+            emp.photo_url = f"/api/v1/employees/{emp.id}/photo"
         decrypted_list.append(emp)
         
     # Perform search filter in memory
@@ -233,7 +238,7 @@ async def get_employee(
     employee.address = decrypt(employee.address)
     employee.birth_date = decrypt(employee.birth_date)
     if employee.photo_url:
-        employee.photo_url = f"{BASE_URL}/api/v1/employees/{employee.id}/photo"
+        employee.photo_url = f"/api/v1/employees/{employee.id}/photo"
         
     return employee
 
@@ -380,7 +385,7 @@ async def update_employee(
     employee.address = decrypt(employee.address)
     employee.birth_date = decrypt(employee.birth_date)
     if employee.photo_url:
-        employee.photo_url = f"{BASE_URL}/api/v1/employees/{employee.id}/photo"
+        employee.photo_url = f"/api/v1/employees/{employee.id}/photo"
         
     return employee
 
@@ -428,10 +433,14 @@ async def get_employee_photo(
     """
     Retrieves and decrypts the profile photo of a specific employee, serving it as a direct image response.
     """
-    stmt = select(Employee).filter(Employee.id == employee_id)
+    stmt = select(Employee.photo_url).filter(Employee.id == employee_id)
     result = await db.execute(stmt)
-    employee = result.scalars().first()
-    if not employee or not employee.photo_url:
+    photo_filename = result.scalars().first()
+    
+    # Release DB connection immediately back to pool before starting storage I/O
+    await db.close()
+
+    if not photo_filename:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Photo not found"
@@ -439,13 +448,13 @@ async def get_employee_photo(
 
     try:
         # Download encrypted file
-        encrypted_bytes = await storage.download(employee.photo_url)
+        encrypted_bytes = await storage.download(photo_filename)
         # Decrypt binary data
         decrypted_bytes = decrypt_bytes(encrypted_bytes)
         
         # Detect mime type from file extension
         mime_type = "image/png"
-        if employee.photo_url.lower().endswith((".jpg", ".jpeg")):
+        if photo_filename.lower().endswith((".jpg", ".jpeg")):
             mime_type = "image/jpeg"
             
         return Response(content=decrypted_bytes, media_type=mime_type)

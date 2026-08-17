@@ -19,8 +19,9 @@ def decrypt(ciphertext: str | None) -> str | None:
         return None
     try:
         return _fernet.decrypt(ciphertext.encode("ascii")).decode("utf-8")
-    except Exception as e:
-        raise ValueError(f"Decryption failed: {str(e)}")
+    except Exception:
+        # Graceful fallback: return original string if already plaintext
+        return ciphertext
 
 def encrypt_bytes(data: bytes | None) -> bytes | None:
     if data is None:
@@ -35,8 +36,9 @@ def decrypt_bytes(data: bytes | None) -> bytes | None:
         return None
     try:
         return _fernet.decrypt(data)
-    except Exception as e:
-        raise ValueError(f"Byte decryption failed: {str(e)}")
+    except Exception:
+        # Graceful fallback: return original bytes if already unencrypted
+        return data
 
 import hashlib
 

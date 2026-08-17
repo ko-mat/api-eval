@@ -15,6 +15,11 @@
                 <a href="#" class="nav-item active" id="nav-employees">Employees</a>
                 <a href="#" class="nav-item" id="nav-departments">Departments</a>
             </nav>
+            <div class="sidebar-user" id="sidebar-user" style="display:none; margin-top: auto; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Logged in as</div>
+                <div style="font-weight: 600; margin-bottom: 0.75rem;" id="current-username">admin</div>
+                <button class="btn btn-secondary btn-block" id="btn-logout" style="padding: 0.4rem; font-size: 0.85rem;">Logout</button>
+            </div>
         </aside>
 
         <!-- Main Content -->
@@ -172,6 +177,29 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Modal (Login) -->
+    <div class="modal-overlay" id="login-overlay" style="z-index: 999; backdrop-filter: blur(4px);"></div>
+    <div class="modal" id="login-modal" style="z-index: 1000; max-width: 400px;">
+        <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+            <h2>Admin Login</h2>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Please enter administrator credentials to access HR API System.</p>
+            <form id="form-login" novalidate>
+                <div class="form-group">
+                    <label for="login_username">Username</label>
+                    <input type="text" id="login_username" name="username" required placeholder="admin" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login_password">Password</label>
+                    <input type="password" id="login_password" name="password" required placeholder="••••••••" autocomplete="current-password">
+                </div>
+                <div id="login-error" style="display: none; color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem;"></div>
+                <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js?v=3"></script>
 </body>
 </html>

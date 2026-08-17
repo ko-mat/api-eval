@@ -1,0 +1,73 @@
+name: CD - Deploy to Azure Container Apps
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Deployment Target"
+        required: true
+        default: "Azure-Container-Apps"
+        type: choice
+        options:
+          - "Azure-Container-Apps"
+
+jobs:
+  ci-quality-gate:
+    name: Run CI Tests before Deploy
+    uses: ./.github/workflows/ci.yml
+
+  deploy-azure:
+    name: Build and Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: ci-quality-gate
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry (ACR)
+        run: |
+          ACR_NAME="${{ secrets.AZURE_ACR_NAME || 'creval852093' }}"
+          az acr login --name "$ACR_NAME"
+
+      - name: Build and Push Docker Image to ACR
+        run: |
+          ACR_NAME="${{ secrets.AZURE_ACR_NAME || 'creval852093' }}"
+          IMAGE_TAG="${ACR_NAME}.azurecr.io/hr-api:${{ github.sha }}"
+          LATEST_TAG="${ACR_NAME}.azurecr.io/hr-api:latest"
+
+          docker build -t "$IMAGE_TAG" -t "$LATEST_TAG" .
+          docker push "$IMAGE_TAG"
+          docker push "$LATEST_TAG"
+
+      - name: Update Azure Container App Revision
+        run: |
+          RESOURCE_GROUP="${{ secrets.AZURE_RESOURCE_GROUP || 'rg-api-eval' }}"
+          APP_NAME="${{ secrets.AZURE_CONTAINER_APP_NAME || 'ca-api-eval' }}"
+          ACR_NAME="${{ secrets.AZURE_ACR_NAME || 'creval852093' }}"
+          IMAGE_TAG="${ACR_NAME}.azurecr.io/hr-api:${{ github.sha }}"
+
+          az containerapp update \
+            --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "$IMAGE_TAG"
+
+      - name: Perform Azure Health Check
+        run: |
+          RESOURCE_GROUP="${{ secrets.AZURE_RESOURCE_GROUP || 'rg-api-eval' }}"
+          APP_NAME="${{ secrets.AZURE_CONTAINER_APP_NAME || 'ca-api-eval' }}"
+
+          APP_FQDN=$(az containerapp show \
+            --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "properties.configuration.ingress.fqdn" \
+            --output text)
+
+          echo "Verifying Azure endpoint: https://${APP_FQDN}/ ..."
+          curl -f --retry 5 --retry-delay 5 "https://${APP_FQDN}/" || exit 1
+          echo "Deployment to Azure Container Apps verified successfully!"

@@ -7,6 +7,14 @@
 *.pm.tdy
 *.bs
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+data/
+venv/
+.env
+bak
 
 # Devel::Cover
 cover_db/

@@ -15,9 +15,9 @@ engine_kwargs = {
 if not is_sqlite:
     # Configure production pool size for PostgreSQL / MySQL
     engine_kwargs.update({
-        "pool_size": int(os.getenv("DB_POOL_SIZE", "20")),
-        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "30")),
-        "pool_timeout": float(os.getenv("DB_POOL_TIMEOUT", "30")),
+        "pool_size": int(os.getenv("DB_POOL_SIZE", "15")),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
+        "pool_timeout": float(os.getenv("DB_POOL_TIMEOUT", "20")),
         "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "1800")),
         "pool_pre_ping": True,
     })
