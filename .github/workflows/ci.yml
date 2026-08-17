@@ -36,12 +36,13 @@ jobs:
 
       - name: Run Automated Pytest Suite
         env:
+          PYTHONPATH: "."
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           STORAGE_BACKEND: "local"
           ENCRYPTION_KEY: "T5G7Uv5Y9pPq1XJdfk7D7h9kLmNpQrStUvWxYz01234="
           JWT_SECRET: "ci-secret-jwt-key-2026"
         run: |
-          pytest tests -v --durations=10
+          python -m pytest tests -v --durations=10
 
   docker-build:
     name: Validate Docker Build
